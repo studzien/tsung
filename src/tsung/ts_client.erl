@@ -1107,6 +1107,8 @@ handle_data_msg(Data,State=#state_rcv{request=Req,datasize=OldSize})
 %% local ack, special case for jabber: skip keepalive msg (single space char)
 handle_data_msg(<<32>>, State=#state_rcv{clienttype=ts_jabber}) ->
     {State#state_rcv{ack_done = false},[]};
+handle_data_msg(<<"<stream:features><starttls", _/binary>>, State=#state_rcv{clienttype=ts_jabber}) ->
+    {State#state_rcv{ack_done = false},[]};
 %% local ack, set ack_done to true
 handle_data_msg(Data, State=#state_rcv{request=Req,maxcount=MaxCount,transactions=Transactions}) ->
     ts_mon:rcvmes({State#state_rcv.dump, self(), Data}),
