@@ -50,7 +50,8 @@
          userid/1]).
 
 -export ([starttls_bidi/2,
-          presence_bidi/2]).
+          presence_bidi/2,
+          ping_bidi/2]).
 
 %%----------------------------------------------------------------------
 %% Function: session_default/0
@@ -164,7 +165,8 @@ parse(Data, State=#state_rcv{datasize=Size}) ->
 parse_bidi(Data,  State) ->
     RcvdXml = binary_to_list(Data),
     BidiElements =
-        [{"<presence[^>]*subscribe[\"\']", presence_bidi},
+        [{"<ping xmlns='urn:xmpp:ping'/>", ping_bidi},
+         {"<presence[^>]*subscribe[\"\']", presence_bidi},
          {"<proceed", starttls_bidi}],
     lists:foldl(fun({Regex, Handler}, Acc)->
        case re:run(RcvdXml,Regex) of
@@ -175,6 +177,12 @@ parse_bidi(Data,  State) ->
             Acc
         end
     end, {nodata, State}, BidiElements).
+
+ping_bidi(RcvdXml, State) ->
+    {match, [From]} = re:run(RcvdXml, "from=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [Id]} = re:run(RcvdXml, "id=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    Xml = ["<iq to='", From, "' id='", Id, "' type='result'/>"],
+    {list_to_binary(lists:flatten(Xml)), State}.
 
 presence_bidi(RcvdXml, State)->
     {match,SubMatches} = re:run(RcvdXml,"<presence[^>]*subscribe[\"\'][^>]*>",[global]),
