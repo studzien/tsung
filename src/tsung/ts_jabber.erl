@@ -51,6 +51,8 @@
 
 -export ([starttls_bidi/2,
           presence_bidi/2,
+          receive_bidi/2,
+          receipt_bidi/2,
           ping_bidi/2]).
 
 %%----------------------------------------------------------------------
@@ -166,6 +168,8 @@ parse_bidi(Data,  State) ->
     RcvdXml = binary_to_list(Data),
     BidiElements =
         [{"<ping xmlns='urn:xmpp:ping'/>", ping_bidi},
+         {"accion='messageConfirmReceive'", receipt_bidi},
+         {"accion='messageReceive'", receive_bidi},
          {"<presence[^>]*subscribe[\"\']", presence_bidi},
          {"<proceed", starttls_bidi}],
     lists:foldl(fun({Regex, Handler}, Acc)->
@@ -177,6 +181,24 @@ parse_bidi(Data,  State) ->
             Acc
         end
     end, {nodata, State}, BidiElements).
+
+receipt_bidi(RcvdXml, State) ->
+    {match, [From]} = re:run(RcvdXml, "from=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [Type]} = re:run(RcvdXml, "type=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [Id]} = re:run(RcvdXml, "id=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [IdM]} = re:run(RcvdXml, "idMessage=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    Xml = ["<message to='", From, "' xml:lang='en' accion='messageConfirmReceiveReceipt' id='",
+           Id, "' idMessage='", IdM, "' type='", Type, "'/>"],
+    {list_to_binary(lists:flatten(Xml)), State}.
+
+receive_bidi(RcvdXml, State) ->
+    {match, [From]} = re:run(RcvdXml, "from=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [Type]} = re:run(RcvdXml, "type=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [Id]} = re:run(RcvdXml, "id=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    {match, [IdM]} = re:run(RcvdXml, "idMessage=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
+    Xml = ["<message to='", From, "' xml:lang='en' accion='messageConfirmReceive' id='",
+           Id, "' idMessage='", IdM, "' type='", Type, "'/>"],
+    {list_to_binary(lists:flatten(Xml)), State}.
 
 ping_bidi(RcvdXml, State) ->
     {match, [From]} = re:run(RcvdXml, "from=[\"']([^\s]*)[\"'][\s\/\>]",[{capture,[1],list}]),
