@@ -486,19 +486,24 @@ message(Dest, #jabber{size=Size,data=undefined}, Service) when is_integer(Size) 
     list_to_binary([
                     "<message id='",ts_msg_server:get_id(list), "' to='",
                     Dest, "@", Service,
-                    "' type='chat'><body>",ts_utils:urandomstr_noflat(Size), "</body></message>"]);
+                    "' type='chat' accion='messageReceive'><body>",ts_utils:urandomstr_noflat(Size), "</body></message>"]);
 message(Dest, #jabber{data=Data}, Service) when is_list(Data) ->
     put(previous, Dest),
     list_to_binary([
                     "<message id='",ts_msg_server:get_id(list), "' to='",
                     Dest, "@", Service,
-                    "' type='chat'><body>",Data, "</body></message>"]).
+                    "' type='chat' accion='messageReceive'><body>",Data, "</body></message>"]).
 
 %%----------------------------------------------------------------------
 %% Func: presence/0
 %%----------------------------------------------------------------------
 presence() ->
-    list_to_binary([ "<presence id='",ts_msg_server:get_id(list),"' />"]).
+    list_to_binary([ "<presence id='",ts_msg_server:get_id(list),"'>",
+                    "<c xmlns='http://jabber.org/protocol/caps'",
+                    "   node='http://miclientweb.com/caps' ver='1.0.1'",
+                    "   hash='abc'",
+                    "   ext='acuseack'/>",
+                     "</presence>"]).
 
 %%----------------------------------------------------------------------
 %% Func: presence/1
