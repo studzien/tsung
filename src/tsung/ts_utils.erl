@@ -302,7 +302,7 @@ erl_system_args(extended)->
            end,
     Proto = case init:get_argument(proto_dist) of
                 {ok,[["inet6_tcp"]]}->
-                    ?LOG("IPv6 used for erlang distribution~n",?NOTICE),
+                   ?LOG("IPv6 used for erlang distribution~n",?NOTICE),
                    " -proto_dist inet6_tcp " ;
                _ -> " "
            end,
@@ -320,7 +320,8 @@ erl_system_args(extended)->
               "5.3" ++ _Tail     -> " +Mea r10b ";
               _ -> " "
           end,
-    lists:append([BasicArgs, Shared, Hybrid, Smp, Mea, Inet, Proto, Threads,ProcessMax,ListenMin,ListenMax]).
+    OsMon = " -eval \\\"application:start(sasl), application:start(os_mon)\\\" ",
+    lists:append([BasicArgs, Shared, Hybrid, Smp, Mea, Inet, Proto, Threads,ProcessMax,ListenMin,ListenMax, OsMon]).
 
 %%----------------------------------------------------------------------
 %% setsubdir/1
