@@ -466,6 +466,12 @@ export_stats(State=#state{log=Log,stats=Stats,laststats=LastStats, backend=BackE
 
 export_stats_common(BackEnd, Stats,LastStats,Log)->
     Param = {BackEnd,LastStats#stats.os_mon,Log},
+    %try
+        %export_graphite(Stats)
+    %catch _:_ ->
+        %ok
+    %end,
+    export_graphite(Stats),
     dict:fold(fun ts_stats_mon:print_stats/3, Param, Stats#stats.os_mon),
     ts_stats_mon:print_stats({session, sample}, Stats#stats.session,{BackEnd,[],Log}),
     ts_stats_mon:print_stats({users_count, count},
@@ -480,6 +486,40 @@ export_stats_common(BackEnd, Stats,LastStats,Log)->
     ts_stats_mon:dumpstats(transaction),
     ts_stats_mon:dumpstats().
 
+export_graphite(Stats) ->
+    {Mega, Seconds, _} = os:timestamp(),
+    TS = 1000000*Mega+Seconds,
+
+    DictToMetrics = fun(Prefix, Dict) ->
+        [{lists:concat([Prefix, Name]), Type, Value} ||
+             {{Name, Type}, Value} <- dict:to_list(Dict)]
+    end,
+    
+    Metrics = [{"tsung.users_count", count, Stats#stats.users_count},
+               {"tsung.finish_users_count", count, Stats#stats.finish_users_count},
+               {"tsung.request", sample, ts_stats_mon:get_stats(request)},
+               {"tsung.page", sample, ts_stats_mon:get_stats(page)},
+               {"tsung.connect", sample, ts_stats_mon:get_stats(connect)}]
+              ++ DictToMetrics("tsung.transaction.",
+                               ts_stats_mon:get_stats(transaction))
+              ++ DictToMetrics("tsung.",
+                               ts_stats_mon:get_stats()),
+
+    Output = [graphite_metric(NS,Type,Value,TS) || {NS,Type,Value} <- Metrics],
+
+    {ok, Socket} = gen_tcp:connect("localhost", 2003, []),
+    gen_tcp:send(Socket, Output),
+    gen_tcp:close(Socket).
+
+graphite_metric(Namespace, sum, Value, Timestamp) ->
+    do_graphite_metric(Namespace, Value, Timestamp);
+graphite_metric(Namespace, count, Value, Timestamp) ->
+    do_graphite_metric(Namespace, Value, Timestamp);
+graphite_metric(Namespace, sample, [Mean|_], Timestamp) ->
+    do_graphite_metric(Namespace, Mean, Timestamp).
+
+do_graphite_metric(Namespace, Value, Timestamp) ->
+    io_lib:format("~s ~p ~p~n", [Namespace, Value, Timestamp]).
 %%----------------------------------------------------------------------
 %% Func: start_launchers/2
 %% @doc start the launcher on clients nodes

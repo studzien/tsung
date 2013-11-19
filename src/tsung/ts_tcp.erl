@@ -46,6 +46,10 @@ connect(Host, Port, Opts) ->
 opts_to_tcp_opts(Opts) -> Opts.
 
 %% send/3 -> ok | {error, Reason}
+send(_Socket, "", _Opts) ->
+    ok;
+send(_Socket, <<>>, _Opts) ->
+    ok;
 send(Socket, Data, _Opts)  ->
     gen_tcp:send(Socket, Data).
 

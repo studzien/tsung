@@ -43,6 +43,7 @@
          add/1, add/2, dumpstats/0, dumpstats/1,
          set_output/2, set_output/3,
          status/1, status/2 ]).
+-export([get_stats/0, get_stats/1]).
 
 %% More external exports for ts_mon
 -export([update_stats/3, add_stats_data/2, reset_all_stats/1]).
@@ -101,6 +102,11 @@ dumpstats() ->
 dumpstats(Id) ->
     gen_server:cast({global, Id}, {dumpstats}).
 
+get_stats() ->
+    gen_server:call({global, ?MODULE}, {get_stats}).
+get_stats(Id) ->
+    gen_server:call({global, Id}, {get_stats}).
+
 set_output(BackEnd,Stream) ->
     set_output(BackEnd,Stream,?MODULE).
 
@@ -154,6 +160,9 @@ handle_call({status}, _From, State=#state{stats=Stats} ) ->
 handle_call({status, Name, Type}, _From, State ) ->
     Value = dict:find({Name,Type}, State#state.stats),
     {reply, Value, State};
+
+handle_call({get_stats}, _From, State=#state{stats=Stats}) ->
+    {reply, Stats, State};
 
 handle_call(Request, _From, State) ->
     ?LOGF("Unknown call ~p !~n",[Request],?ERR),
