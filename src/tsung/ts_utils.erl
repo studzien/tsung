@@ -320,8 +320,7 @@ erl_system_args(extended)->
               "5.3" ++ _Tail     -> " +Mea r10b ";
               _ -> " "
           end,
-    OsMon = " -eval \\\"application:start(sasl), application:start(os_mon)\\\" ",
-    lists:append([BasicArgs, Shared, Hybrid, Smp, Mea, Inet, Proto, Threads,ProcessMax,ListenMin,ListenMax, OsMon]).
+    lists:append([BasicArgs, Shared, Hybrid, Smp, Mea, Inet, Proto, Threads,ProcessMax,ListenMin,ListenMax]).
 
 %%----------------------------------------------------------------------
 %% setsubdir/1
