@@ -59,7 +59,14 @@ parse_config(Element = #xmlElement{name=jabber},
     Dest= ts_config:getAttr(atom,Element#xmlElement.attributes, destination,random),
 
     Size= ts_config:getAttr(integer,Element#xmlElement.attributes, size,0),
-    Data= ts_config:getAttr(string,Element#xmlElement.attributes, data,undefined),
+    Data = case lists:keysearch(data, #xmlElement.name,
+                                Element#xmlElement.content) of
+                  {value, DataEl=#xmlElement{} } ->
+                    data_elem_to_string(DataEl);
+                  _ ->
+                    ts_config:getAttr(string, Element#xmlElement.attributes,
+                                      data, undefined)
+              end,
     Show= ts_config:getAttr(string,Element#xmlElement.attributes, show, "chat"),
     Status= ts_config:getAttr(string,Element#xmlElement.attributes, status, "Available"),
     Resource= ts_config:getAttr(string,Element#xmlElement.attributes, resource, "tsung"),
@@ -232,3 +239,35 @@ initialize_options(Tab) ->
         _Else ->
             ok
     end.
+
+data_elem_to_string(DataEl=#xmlElement{attributes=DataAttrs}) ->
+    RawData = lists:flatten(get_cdata(DataEl)),
+    case ts_config:getAttr(atom, DataAttrs, normalize_xml, false) of
+        true ->
+            lists:flatten(normalize_xml(RawData));
+        false ->
+            RawData
+    end.
+
+%% @doc Returns merged text skipping elements.
+-spec get_cdata(#xmlElement{}) -> iolist().
+get_cdata(#xmlElement{content = Children}) when is_list(Children) ->
+    [Text || #xmlText{value = Text} <- Children].
+
+-spec normalize_xml(string()) -> iolist().
+normalize_xml(InXML) ->
+    Elems = safe_xml_parse(InXML),
+    [xmerl:export_element(Elem, xmerl_xml) || Elem <- Elems].
+
+%% @doc Protects against expected_element_start_tag exception.
+-spec safe_xml_parse(string()) -> list().
+safe_xml_parse(InXML) ->
+    {#xmlElement{content=Elems}, _} =
+        xmerl_scan:string("<xml>" ++ InXML ++ "</xml>",
+                          [{space, normalize}, {hook_fun, fun trim_iter/2}]),
+    Elems.
+
+trim_iter(X=#xmlText{value=Text}, S) ->
+    {X#xmlText{value=string:strip(Text)}, S};
+trim_iter(X, S) ->
+    {X, S}.
