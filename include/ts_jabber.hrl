@@ -30,7 +30,8 @@
                          user_server,
                          username,
                          passwd,
-                         domain}).
+                         domain,
+                         prefix}).
 
 -record(jabber, {dest,
                  size,

@@ -47,7 +47,8 @@
          decode_buffer/2,
          new_session/0,
          username/2,
-         userid/1]).
+         userid/1,
+         random_jid/1]).
 
 -export ([starttls_bidi/2,
           presence_bidi/2]).
@@ -72,6 +73,17 @@ decode_buffer(Buffer,#jabber_session{}) ->
 %% @doc  return the current userid  @end
 userid({#jabber_session{username=UID},_DynVars})-> UID.
 
+random_jid({#jabber_session{ user_server=UserServer, domain=Domain, prefix=Prefix }, _DynVars}) ->
+    case ts_user_server:get_id(UserServer) of
+        {error, Msg} ->
+            ?LOGF("Can't find a random user (~p)~n", [Msg],?ERR),
+            error(Msg);
+        {Dest,_} ->
+            Dest ++ "@" ++ Domain;
+        DestId ->
+            Dest = ts_jabber:username(Prefix, DestId),
+            Dest ++ "@" ++ Domain
+    end.
 
 
 %%----------------------------------------------------------------------
@@ -87,6 +99,12 @@ new_session() ->
 %% Args:    #jabber
 %% Returns: binary
 %%----------------------------------------------------------------------
+get_message(Req=#jabber{prefix=Prefix}, State=#state_rcv{session=S}) when S#jabber_session.prefix == undefined, Prefix =/= undefined ->
+    %% First task is to put the user prefix into session.
+    %% It will be used in `random_jid/1'.
+    NewS = S#jabber_session{prefix=Prefix},
+    get_message(Req, State#state_rcv{session=NewS});
+
 get_message(Req=#jabber{domain={domain,Domain}}, State=#state_rcv{session=S}) when S#jabber_session.domain == undefined  ->
     NewS = S#jabber_session{domain=Domain, user_server=default},
     get_message(Req#jabber{domain=Domain, user_server=default},State#state_rcv{session=NewS});
