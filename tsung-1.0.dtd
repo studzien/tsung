@@ -397,7 +397,7 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ELEMENT value (#PCDATA) >
 
 
-<!ELEMENT setdynvars (var*) >
+<!ELEMENT setdynvars (code?, var*) >
 <!ATTLIST setdynvars
     sourcetype   (random_string | urandom_string | random_number |
           file | erlang | eval| jsonpath | value | server)  #REQUIRED
@@ -416,6 +416,8 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ELEMENT var (#PCDATA) >
 <!ATTLIST var
     name CDATA #REQUIRED>
+
+<!ELEMENT code (#PCDATA) >
 
 <!ELEMENT for (request | thinktime | transaction | setdynvars | for |
           if | repeat | change_type | foreach | interaction )+>

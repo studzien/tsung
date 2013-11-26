@@ -905,7 +905,12 @@ parse(Element = #xmlElement{name=setdynvars, attributes=Attrs},
                      [Module,Callback] = string:tokens(getAttr(string,Attrs,callback,none),":"),
                      {setdynvars,erlang,{list_to_atom(Module),list_to_atom(Callback)},Vars};
                  "eval" ->
-                     Snippet = getAttr(string,Attrs,code,""),
+                     Snippet = case lists:keysearch(code, #xmlElement.name, Element#xmlElement.content) of
+                                   {value, CodeEl=#xmlElement{} } ->
+                                     lists:flatten(get_cdata(CodeEl));
+                                   _ ->
+                                     getAttr(string,Attrs,code,"")
+                               end,
                      Fun= ts_utils:eval(Snippet),
                      true = is_function(Fun, 1),
                      {setdynvars,code,Fun,Vars};
@@ -1148,3 +1153,10 @@ get_popularity(Proba, _, false,Total) when is_number(Proba) ->
     {Proba, false, Proba+Total};
 get_popularity(_, Weight, true, Total)    when is_number(Weight) ->
     {Weight, true, Weight+Total}.
+
+
+%% @doc Returns merged text skipping elements.
+-spec get_cdata(#xmlElement{}) -> iolist().
+get_cdata(#xmlElement{content = Children}) when is_list(Children) ->
+    [Text || #xmlText{value = Text} <- Children].
+
