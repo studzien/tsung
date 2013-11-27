@@ -897,7 +897,7 @@ parse(Element = #xmlElement{name=thinktime, attributes=Attrs},
 
 %% Parsing the setdynvars element
 parse(Element = #xmlElement{name=setdynvars, attributes=Attrs},
-      Conf = #config{session_tab = Tab, sessions=[CurS|_], curid=Id}) ->
+      Conf = #config{session_tab = Tab, sessions=[CurS|_], curid=Id, funs=Funs}) ->
 
     Vars = [ getAttr(atom,Attr,name,none) || #xmlElement{name=var,attributes=Attr} <- Element#xmlElement.content],
     Action = case getAttr(string,Attrs,sourcetype,"erlang") of
@@ -905,13 +905,8 @@ parse(Element = #xmlElement{name=setdynvars, attributes=Attrs},
                      [Module,Callback] = string:tokens(getAttr(string,Attrs,callback,none),":"),
                      {setdynvars,erlang,{list_to_atom(Module),list_to_atom(Callback)},Vars};
                  "eval" ->
-                     Snippet = case lists:keysearch(code, #xmlElement.name, Element#xmlElement.content) of
-                                   {value, CodeEl=#xmlElement{} } ->
-                                     lists:flatten(get_cdata(CodeEl));
-                                   _ ->
-                                     getAttr(string,Attrs,code,"")
-                               end,
-                     Fun= ts_utils:eval(Snippet),
+                     Snippet = get_attr_or_text(code, Element),
+                     Fun= ts_utils:eval(Snippet, Funs),
                      true = is_function(Fun, 1),
                      {setdynvars,code,Fun,Vars};
                  "file"   ->
@@ -940,7 +935,7 @@ parse(Element = #xmlElement{name=setdynvars, attributes=Attrs},
                      JSONPath = getAttr(Attrs,jsonpath),
                      {setdynvars,jsonpath,{JSONPath, From},Vars};
                  "value" ->
-                     Value = getAttr(string,Attrs,value,""),
+                     Value = get_attr_or_text(value, Element),
                      {setdynvars,value,{string,Value},Vars};
                  "server" ->
                      {setdynvars,server,{},Vars}
@@ -948,6 +943,14 @@ parse(Element = #xmlElement{name=setdynvars, attributes=Attrs},
     ?LOGF("Add setdynvars in session ~p as id ~p",[CurS#session.id,Id+1],?INFO),
     ets:insert(Tab, {{CurS#session.id, Id+1}, Action}),
     Conf#config{curid=Id+1};
+
+parse(Element = #xmlElement{name=deffun, attributes=Attrs},
+    Conf = #config{curid=Id, funs=Funs}) ->
+    Name = getAttr(atom, Attrs, name),
+    Snippet = get_attr_or_text(code, Element),
+    Fun = ts_utils:eval(Snippet, Funs),
+    true = is_function(Fun),
+    Conf#config{curid=Id+1, funs=orddict:store(Name, Fun, Funs)};
 
 %% Parsing other elements
 parse(Element = #xmlElement{}, Conf = #config{}) ->
@@ -1154,9 +1157,15 @@ get_popularity(Proba, _, false,Total) when is_number(Proba) ->
 get_popularity(_, Weight, true, Total)    when is_number(Weight) ->
     {Weight, true, Weight+Total}.
 
+get_attr_or_text(Name, #xmlElement{attributes=Attrs, content=Content}) when is_atom(Name) ->
+    case lists:keysearch(Name, #xmlElement.name, Content) of
+       {value, SubElement=#xmlElement{} } ->
+         lists:flatten(get_cdata(SubElement));
+       _ ->
+         getAttr(string, Attrs, Name, "")
+    end.
 
 %% @doc Returns merged text skipping elements.
 -spec get_cdata(#xmlElement{}) -> iolist().
 get_cdata(#xmlElement{content = Children}) when is_list(Children) ->
     [Text || #xmlText{value = Text} <- Children].
-

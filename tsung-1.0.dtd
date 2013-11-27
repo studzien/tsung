@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!ELEMENT tsung (information?, clients, servers, monitoring?, load, options?, sessions)>
+<!ELEMENT tsung (information?, clients, servers, monitoring?, load, options?, deffun*, sessions)>
 
 <!ELEMENT information (name|description|username|organisation)*>
 
@@ -397,7 +397,7 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ELEMENT value (#PCDATA) >
 
 
-<!ELEMENT setdynvars (code?, var*) >
+<!ELEMENT setdynvars (code?, value?, var*) >
 <!ATTLIST setdynvars
     sourcetype   (random_string | urandom_string | random_number |
           file | erlang | eval| jsonpath | value | server)  #REQUIRED
@@ -418,6 +418,13 @@ repeat | if | change_type | foreach | set_option | interaction )*>
     name CDATA #REQUIRED>
 
 <!ELEMENT code (#PCDATA) >
+
+<!ELEMENT deffun (code?) >
+<!ATTLIST deffun
+    name         CDATA   #REQUIRED
+    sourcetype   (eval)  #REQUIRED
+    code         CDATA   #IMPLIED
+    >
 
 <!ELEMENT for (request | thinktime | transaction | setdynvars | for |
           if | repeat | change_type | foreach | interaction )+>

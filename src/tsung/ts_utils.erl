@@ -41,7 +41,7 @@
          make_dir_rec/1, is_ip/1, from_https/1, to_https/1, keymax/2,
          check_sum/3, check_sum/5, clean_str/1, file_to_list/1, term_to_list/1,
          decode_base64/1, encode_base64/1, to_lower/1, release_is_newer_or_eq/1,
-         randomstr/1,urandomstr/1,urandomstr_noflat/1, eval/1, list_to_number/1,
+         randomstr/1,urandomstr/1,urandomstr_noflat/1, eval/1, eval/2, list_to_number/1,
          time2sec/1, time2sec_hires/1, read_file_raw/1, init_seed/1, jsonpath/2, pmap/2,
          concat_atoms/1, ceiling/1, accept_loop/3, append_to_filename/3, splitchar/2,
          randombinstr/1,urandombinstr/1,log_transaction/1,conv_entities/1, wildcard/2
@@ -730,8 +730,40 @@ randombinstr(Size,Bin) ->
 eval(Code) ->
     {ok, Scanned, _} = erl_scan:string(lists:flatten(Code)),
     {ok, Parsed} = erl_parse:parse_exprs(Scanned),
-    {value, Result, _} = erl_eval:exprs(Parsed,  erl_eval:new_bindings()),
+    {value, Result, _} = erl_eval:exprs(Parsed, erl_eval:new_bindings()),
     Result.
+
+-spec eval(string(), orddict:orddict()) -> fun().
+eval(Code, []) ->
+    eval(Code);
+eval(Code, Funs) ->
+    {ok, Scanned, _} = erl_scan:string(lists:flatten(Code)),
+    {ok, Parsed} = erl_parse:parse_exprs(Scanned),
+    Bindings = erl_eval:new_bindings(),
+    Func = fun(Name, Args) ->
+               F = orddict:fetch(Name, Funs),
+               try
+                   assert_arity(F, Args),
+                   apply(F, Args)
+               catch Class:Reason ->
+                   Stacktrace = erlang:get_stacktrace(),
+                   ?LOGF("Calling ~p with arguments ~p~n failed with reason ~p:~p~nStacktrace ~p~nDefined functions: ~p",
+                         [Name, Args, Class, Reason, Stacktrace, Funs], ?ERR),
+                   erlang:raise(Class, Reason, Stacktrace)
+               end
+           end,
+    LocalFunctionHandler = {value, Func},
+    {value, Result, _} = erl_eval:exprs(Parsed, Bindings, LocalFunctionHandler),
+    Result.
+
+assert_arity(F, Args) ->
+    ArgsCount = length(Args),
+    case erlang:fun_info(F, arity) of
+        {arity, ArgsCount} ->
+            ok;
+        {arity, Arity} ->
+            error({wrong_number_of_arguments, Arity, ArgsCount})
+    end.
 
 %%----------------------------------------------------------------------
 %% @spec list_to_number(string()) -> integer() | float()
