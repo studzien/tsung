@@ -515,8 +515,8 @@ set_dynvars(urandom,{string,Length},Vars,_DynVars,_,_) ->
     %% not random, but much faster
     R = fun(_) -> ts_utils:urandombinstr(Length) end,
     lists:map(R,Vars);
-set_dynvars(value,{string,Value},_Vars,_DynVars,_,_) ->
-    [Value];
+set_dynvars(value,{string,Value},_Vars,DynVars,_,_) ->
+    [ts_search:subst(Value, DynVars)];
 set_dynvars(file,{random,FileId,Delimiter},_Vars,_DynVars,_,_) ->
     {ok,Line} = ts_file_server:get_random_line(FileId),
     ts_utils:split(Line,Delimiter);
