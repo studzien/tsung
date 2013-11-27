@@ -466,12 +466,11 @@ export_stats(State=#state{log=Log,stats=Stats,laststats=LastStats, backend=BackE
 
 export_stats_common(BackEnd, Stats,LastStats,Log)->
     Param = {BackEnd,LastStats#stats.os_mon,Log},
-    %try
-        %export_graphite(Stats)
-    %catch _:_ ->
-        %ok
-    %end,
-    export_graphite(Stats),
+    try
+        export_graphite(Stats)
+    catch _:_ ->
+        ok
+    end,
     dict:fold(fun ts_stats_mon:print_stats/3, Param, Stats#stats.os_mon),
     ts_stats_mon:print_stats({session, sample}, Stats#stats.session,{BackEnd,[],Log}),
     ts_stats_mon:print_stats({users_count, count},
