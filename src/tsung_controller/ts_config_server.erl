@@ -414,9 +414,9 @@ handle_cast({newbeam, Host, _}, State=#state{ hostname=LocalHost,config=Config})
 
 %% start a launcher on a new beam with slave module
 handle_cast({newbeam, Host, Args}, State=#state{last_beam_id = NodeId, config=Config, logdir = LogDir}) ->
-    Args = set_remote_args(LogDir,Config#config.ports_range),
+    CmdArgs = set_remote_args(LogDir,Config#config.ports_range),
     Seed = Config#config.seed,
-    Node = remote_launcher(Host, NodeId, Args),
+    Node = remote_launcher(Host, NodeId, CmdArgs),
     ts_launcher_static:stop(Node), % no need for static launcher in this case (already have one)
     ts_launcher:launch({Node, Args, Seed}),
     {noreply, State#state{last_beam_id = NodeId+1}};
