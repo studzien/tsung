@@ -55,6 +55,7 @@
           subst    = false,   % Substitution should be applied on the request
           match,              % Match regexp in response
           dynvar   = [],
+          funs     = [],
           main_sess_type , % main type of session
           sessions = [],
           static_users=[],

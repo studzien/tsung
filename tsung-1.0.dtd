@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!ELEMENT tsung (information?, clients, servers, monitoring?, load, options?, sessions)>
+<!ELEMENT tsung (information?, clients, servers, monitoring?, load, options?, deffun*, sessions)>
 
 <!ELEMENT information (name|description|username|organisation)*>
 
@@ -241,7 +241,7 @@ repeat | if | change_type | foreach | set_option | interaction )*>
     access_token_secret CDATA #IMPLIED
     method  (HMAC-SHA1 | PLAINTEXT | RSA-SHA1) "HMAC-SHA1">
 
-<!ELEMENT jabber (xmpp_authenticate?) >
+<!ELEMENT jabber (xmpp_authenticate? | data?) >
 <!ATTLIST jabber
     ack         (global | local | no_ack | parse) #REQUIRED
     destination (online | offline | random | unique | previous) "random"
@@ -266,6 +266,10 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ATTLIST xmpp_authenticate
     passwd   CDATA #REQUIRED
     username CDATA #REQUIRED >
+
+<!ELEMENT data (#PCDATA) >
+<!ATTLIST data
+    normalize_xml (true | false) "false" >
 
 
 <!ELEMENT fs EMPTY >
@@ -393,7 +397,7 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ELEMENT value (#PCDATA) >
 
 
-<!ELEMENT setdynvars (var*) >
+<!ELEMENT setdynvars (code?, value?, var*) >
 <!ATTLIST setdynvars
     sourcetype   (random_string | urandom_string | random_number |
           file | erlang | eval| jsonpath | value | server)  #REQUIRED
@@ -412,6 +416,15 @@ repeat | if | change_type | foreach | set_option | interaction )*>
 <!ELEMENT var (#PCDATA) >
 <!ATTLIST var
     name CDATA #REQUIRED>
+
+<!ELEMENT code (#PCDATA) >
+
+<!ELEMENT deffun (code?) >
+<!ATTLIST deffun
+    name         CDATA   #REQUIRED
+    sourcetype   (eval)  #REQUIRED
+    code         CDATA   #IMPLIED
+    >
 
 <!ELEMENT for (request | thinktime | transaction | setdynvars | for |
           if | repeat | change_type | foreach | interaction )+>
