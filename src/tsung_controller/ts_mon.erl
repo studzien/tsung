@@ -493,20 +493,20 @@ export_graphite(Stats) ->
         [{lists:concat([Prefix, Name]), Type, Value} ||
              {{Name, Type}, Value} <- dict:to_list(Dict)]
     end,
-    
-    Metrics = [{"tsung.users_count", count, Stats#stats.users_count},
-               {"tsung.finish_users_count", count, Stats#stats.finish_users_count},
-               {"tsung.request", sample, ts_stats_mon:get_stats(request)},
-               {"tsung.page", sample, ts_stats_mon:get_stats(page)},
-               {"tsung.connect", sample, ts_stats_mon:get_stats(connect)}]
-              ++ DictToMetrics("tsung.transaction.",
+    Host = string:strip(os:cmd("hostname"), both, $\n),
+    Metrics = [{namespace(Host, "users_count"), count, Stats#stats.users_count},
+               {namespace(Host, "finish_users_count"), count, Stats#stats.finish_users_count},
+               {namespace(Host, "request"), sample, ts_stats_mon:get_stats(request)},
+               {namespace(Host, "page"), sample, ts_stats_mon:get_stats(page)},
+               {namespace(Host, "connect"), sample, ts_stats_mon:get_stats(connect)}]
+              ++ DictToMetrics(namespace(Host, "transaction") ++ ".",
                                ts_stats_mon:get_stats(transaction))
-              ++ DictToMetrics("tsung.",
+              ++ DictToMetrics("tsung." ++ Host ++ ".",
                                ts_stats_mon:get_stats()),
 
     Output = [graphite_metric(NS,Type,Value,TS) || {NS,Type,Value} <- Metrics],
 
-    {ok, Socket} = gen_tcp:connect("localhost", 2003, []),
+    {ok, Socket} = gen_tcp:connect("10.100.0.70", 2003, []),
     gen_tcp:send(Socket, Output),
     gen_tcp:close(Socket).
 
@@ -519,6 +519,9 @@ graphite_metric(Namespace, sample, [Mean|_], Timestamp) ->
 
 do_graphite_metric(Namespace, Value, Timestamp) ->
     io_lib:format("~s ~p ~p~n", [Namespace, Value, Timestamp]).
+
+namespace(Hostname, Metric) ->
+	"tsung." ++ Hostname ++ "." ++ Metric.
 %%----------------------------------------------------------------------
 %% Func: start_launchers/2
 %% @doc start the launcher on clients nodes
